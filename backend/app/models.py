@@ -46,7 +46,7 @@ class State(enum.Enum):
 class Account(Base):
     __tablename__ = "accounts"
     id = Column(Integer, primary_key=True)
-    name = Column(String(50), unique=True)
+    name = Column(String(50), unique=True, nullable=False)
 
     wallets = relationship("Wallet", back_populates="account")
 
@@ -57,8 +57,8 @@ class Account(Base):
 class Wallet(Base):
     __tablename__ = "wallets"
     id = Column(Integer, primary_key=True)
-    name = Column(String(50))
-    account_id = Column(Integer, ForeignKey("accounts.id"))
+    name = Column(String(50), nullable=False)
+    account_id = Column(Integer, ForeignKey("accounts.id"), nullable=False)
     currency = Column(Enum(Currency), nullable=False, default=Currency.EUR)
 
     account = relationship("Account", back_populates="wallets")
@@ -100,7 +100,7 @@ class Transaction(Base):
     __tablename__ = "transactions"
     id = Column(Integer, primary_key=True)
     type = Column(Enum(Operation), nullable=False)
-    date = Column(DateTime)
+    date = Column(DateTime, nullable=False)
     description = Column(Text)
 
     flows = relationship("Flow", back_populates="transaction")
@@ -115,10 +115,10 @@ class Transaction(Base):
 class Flow(Base):
     __tablename__ = "flows"
     id = Column(Integer, primary_key=True)
-    wallet_id = Column(Integer, ForeignKey("wallets.id"))
-    amount = Column(Numeric(20, 2))
-    state = Column(Enum(State), default=State.CPL)
-    transaction_id = Column(Integer, ForeignKey("transactions.id"))
+    wallet_id = Column(Integer, ForeignKey("wallets.id"), nullable=False)
+    amount = Column(Numeric(20, 2), nullable=False)
+    state = Column(Enum(State), nullable=False, default=State.CPL)
+    transaction_id = Column(Integer, ForeignKey("transactions.id"), nullable=False)
 
     wallet = relationship("Wallet", back_populates="flows")
     transaction = relationship("Transaction", back_populates="flows")
