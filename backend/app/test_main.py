@@ -6,7 +6,7 @@ from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from . import app, get_db, models
+from . import app, get_db
 from .database import Base
 
 SQLALCHEMY_DATABASE_URL = "sqlite://"
@@ -69,7 +69,7 @@ def create_test_wallet(_client):
 def create_test_flow(_client):
     return _client.post(
         "/flows/",
-        json={"amount": "100.00", "wallet_id": 1, "transaction_id": 1},
+        json={"amount": "100.00", "wallet_id": 1, "transaction_id": 1, "state": "CPL"},
     )
 
 
@@ -275,10 +275,7 @@ def test_create_flow(client):
     create_test_account(client)
     create_test_wallet(client)
     create_test_transaction(client)
-    response = client.post(
-        "/flows/",
-        json={"amount": "100.00", "wallet_id": 1, "transaction_id": 1},
-    )
+    response = create_test_flow(client)
     assert response.status_code == 200
     assert decimal.Decimal(response.json()["amount"]) == 100.00
 
@@ -289,7 +286,7 @@ def test_create_flow_no_amount(client):
     create_test_transaction(client)
     response = client.post(
         "/flows/",
-        json={"wallet_id": 1, "transaction_id": 1},
+        json={"wallet_id": 1, "transaction_id": 1, "state": "CPL"},
     )
     assert response.status_code == 422
     assert response.json()["detail"][0]["loc"] == ["body", "amount"]
@@ -301,7 +298,7 @@ def test_create_flow_invalid_amount(client):
     create_test_transaction(client)
     response = client.post(
         "/flows/",
-        json={"amount": "INVALID", "wallet_id": 1, "transaction_id": 1},
+        json={"amount": "INVALID", "wallet_id": 1, "transaction_id": 1, "state": "CPL"},
     )
     assert response.status_code == 422
     assert response.json()["detail"][0]["loc"] == ["body", "amount"]
@@ -313,7 +310,7 @@ def test_create_flow_no_wallet(client):
     create_test_transaction(client)
     response = client.post(
         "/flows/",
-        json={"amount": "100.00", "transaction_id": 1},
+        json={"amount": "100.00", "transaction_id": 1, "state": "CPL"},
     )
     assert response.status_code == 422
     assert response.json()["detail"][0]["loc"] == ["body", "wallet_id"]
@@ -325,7 +322,7 @@ def test_create_flow_invalid_wallet(client):
     create_test_transaction(client)
     response = client.post(
         "/flows/",
-        json={"amount": "100.00", "wallet_id": 2, "transaction_id": 1},
+        json={"amount": "100.00", "wallet_id": 2, "transaction_id": 1, "state": "CPL"},
     )
     assert response.status_code == 404
 
@@ -336,7 +333,7 @@ def test_create_flow_no_transaction(client):
     create_test_transaction(client)
     response = client.post(
         "/flows/",
-        json={"amount": "100.00", "wallet_id": 1},
+        json={"amount": "100.00", "wallet_id": 1, "state": "CPL"},
     )
     assert response.status_code == 422
     assert response.json()["detail"][0]["loc"] == ["body", "transaction_id"]
@@ -348,9 +345,38 @@ def test_create_flow_invalid_transaction(client):
     create_test_transaction(client)
     response = client.post(
         "/flows/",
-        json={"amount": "100.00", "wallet_id": 1, "transaction_id": 2},
+        json={"amount": "100.00", "wallet_id": 1, "transaction_id": 2, "state": "CPL"},
     )
     assert response.status_code == 404
+
+
+def test_create_flow_no_state(client):
+    create_test_account(client)
+    create_test_wallet(client)
+    create_test_transaction(client)
+    response = client.post(
+        "/flows/",
+        json={"amount": "100.00", "wallet_id": 1, "transaction_id": 1},
+    )
+    assert response.status_code == 422
+    assert response.json()["detail"][0]["loc"] == ["body", "state"]
+
+
+def test_create_flow_invalid_state(client):
+    create_test_account(client)
+    create_test_wallet(client)
+    create_test_transaction(client)
+    response = client.post(
+        "/flows/",
+        json={
+            "amount": "100.00",
+            "wallet_id": 1,
+            "transaction_id": 1,
+            "state": "INVALID",
+        },
+    )
+    assert response.status_code == 422
+    assert response.json()["detail"][0]["loc"] == ["body", "state"]
 
 
 def test_read_flows(client):
