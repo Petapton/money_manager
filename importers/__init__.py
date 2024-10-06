@@ -1,3 +1,5 @@
 from .revolut import RevolutImporter
 
-formats = {}
+formats = {
+    "revolut": RevolutImporter,
+}
