@@ -3,7 +3,7 @@ from typing import List, Optional
 
 from pydantic import BaseModel, Field, condecimal
 
-from .models import Currency, Operation
+from .models import Currency, Operation, State
 
 
 class AccountBase(BaseModel):
@@ -33,6 +33,7 @@ class Wallet(WalletBase):
     id: int
     account_id: int
     balance: condecimal(max_digits=20, decimal_places=2)
+    pending_balance: condecimal(max_digits=20, decimal_places=2)
 
     model_config = {"from_attributes": True}
 
@@ -55,6 +56,7 @@ class Transaction(TransactionBase):
 
 class FlowBase(BaseModel):
     amount: condecimal(max_digits=20, decimal_places=2)
+    state: State
 
 
 class FlowCreate(FlowBase):

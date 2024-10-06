@@ -37,6 +37,12 @@ class Operation(enum.Enum):
     OTH = "OTH"  # Other
 
 
+class State(enum.Enum):
+    CPL = "CPL"  # Completed
+    RVT = "RVT"  # Reverted
+    PDG = "PDG"  # Pending
+
+
 class Account(Base):
     __tablename__ = "accounts"
     id = Column(Integer, primary_key=True)
@@ -64,13 +70,25 @@ class Wallet(Base):
 
     @hybrid_property
     def balance(self):
-        return sum(flow.amount for flow in self.flows)
+        return sum(flow.amount for flow in self.flows if flow.state == State.CPL)
 
     @balance.expression
     def balance(cls):
         return (
             select(func.coalesce(func.sum(Flow.amount), 0))
-            .where(Flow.wallet_id == cls.id)
+            .where(Flow.wallet_id == cls.id and Flow.state == State.CPL)
+            .scalar_subquery()
+        )
+
+    @hybrid_property
+    def pending_balance(self):
+        return sum(flow.amount for flow in self.flows if flow.state != State.RVT)
+
+    @pending_balance.expression
+    def pending_balance(cls):
+        return (
+            select(func.coalesce(func.sum(Flow.amount), 0))
+            .where(Flow.wallet_id == cls.id and Flow.state != State.RVT)
             .scalar_subquery()
         )
 
@@ -99,6 +117,7 @@ class Flow(Base):
     id = Column(Integer, primary_key=True)
     wallet_id = Column(Integer, ForeignKey("wallets.id"))
     amount = Column(Numeric(20, 2))
+    state = Column(Enum(State), default=State.CPL)
     transaction_id = Column(Integer, ForeignKey("transactions.id"))
 
     wallet = relationship("Wallet", back_populates="flows")
